@@ -69,27 +69,8 @@ As output you write a GDSII or OASIS file that you can send to your foundry for 
 ## Parametric Cells (PCells) in Python or YAML
 A PCell is a Parametric Cell describing the geometry of a particular device. PCells can accept other PCells as arguments in order to build arbitrarily complex Components.
 
-:::::{grid} 2
-::::{grid-item}
-```python
-@gf.cell
-def mzi_with_bend(radius: float=10)->gf.Component:
-    c = gf.Component()
-    mzi = c.add_ref(gf.components.mzi())
-    bend = c.add_ref(gf.components.bend_euler(radius=radius))
-    bend.connect('o1', mzi['o2'])
-    c.add_port('o1', port=mzi['o1'])
-    c.add_port('o2', port=bend['o2'])
-    return c
-
-c = mzi_with_bend(radius=100)
-```
-::::
-
-::::{grid-item}
 :::{code-cell} python
 :label: compositing
-:tags: ['remove-input']
 :caption: Creating a new `component` by composition of a Mach-Zehnder interferometer  and a bent waveguide attached at port `o2`.
 
 import gdsfactory as gf
@@ -107,8 +88,6 @@ def mzi_with_bend(radius: float=10)->gf.Component:
 c = mzi_with_bend(radius=20)
 c.plot()
 :::
-::::
-:::::
 
 [](#compositing) demonstrates how a new PCell can be created by composing PCells defined prior. Connecting port `o1` of the bend to `o2` of the MZI ensures their correct relative placement, respecting the orientation of the optical ports.
 
@@ -170,9 +149,10 @@ routes:
 ## Schematic Driven Layout
 For complex circuits you can start with a Schematic view that you can convert to YAML.
 
-
 ## Simulations directly from Layout
-GDSFactory python API enables linking together different solvers so that you don’t have to draw the geometry twice. `I would actually emphasize, the reduced risk of mistakes, when all solvers etc. rely on the same geometry (ground truth)`. Solvers work both at the device, circuit and system level.
+The GDSFactory ecosystem supports multiple solvers to simulate the physical behavior of the created design. These cover several aspects, like the optical behavior of single components via finite difference time domain simulations, the collective behavior of multiple coupled components via scattering matrix (S-matrix) circuit simulators, the propagation of thermal transients, electronic properties and more. The single source of truth providing the device geometry, is a key benefit of GDSFactory linking these different simulators together.
+
+
 
 # Conclusion
 The paper has highlighted the key features and functionalities of GDSFactory for hardware design. By leveraging the power of Python, GDSFactory empowers designers with a familiar and flexible programming language widely used in machine learning, scientific computing, and engineering. This enables seamless integration with existing software ecosystems and promotes code reuse and collaboration.
