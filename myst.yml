@@ -13,9 +13,11 @@ project:
           url: https://kit.edu
       github: jan-david-fischbach
     - name: Joaquin Matres
+      corresponding: true
+      email: jmatres@gdsfactory.com
       github: joamatab
       affiliation: 
-        - name: DoPlayDo
+        - name: GDSFactory+
     - name: Troy Tamas
       github: tvt173
       affiliation: 
