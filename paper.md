@@ -2,6 +2,8 @@
 title: GDSFactory - The open ecosystem for EPIC design.
 short_title: GDSFactory
 description: In this short tutorial we provide an overview how GDSFactory bridges (or unifies?) the full EPIC design cycle.
+abstract: |
+    Designing an EPIC -- and (electronic) photonic integrated circuit -- requires robust tooling ranging from exploratory simulation via mask layout and verification to validation. In the past a variety of specialized syntaxes were introduced with similar tooling for electronic chip design -- the older cousin of EPICs. The relatively young age of integrated photonics opens up the opportunity to establish an accessible workflow which is intuitive, easily customizeable and extensible. GDSFactory is a Python based framework to build EPICs that provides a common syntax for design/layout, simulation (Ansys Lumerical, tidy3d, MEEP, MPB, DEVSIM, SAX, Elmer, Palace, …), verification (Klayout DRC, LVS, netlist extraction, connectivity checks, fabrication models) and validation. This paper showcases the capabilities of GDSFactory, highlighting its end-to-end workflow, which enables users to turn their chip designs into working products.
 license:
   content: CC-BY-SA-3.0
 keywords:
@@ -11,13 +13,12 @@ keywords:
     - electronic design automation (EDA)
 export:
   - format: pdf
-    template: lapreprint
+    template: lapreprint-typst
+
+kernelspec:
+  name: python3
+  display_name: 'Python 3'
 ---
-
-+++ { "part": "abstract" }
-
-Designing an EPIC -- and (electronic) photonic integrated circuit -- requires robust tooling ranging from exploratory simulation via mask layout and verification to validation. In the past a variety of specialized syntaxes were introduced with similar tooling for electronic chip design -- the older cousin of EPICs. The relatively young age of integrated photonics opens up the opportunity to establish an accessible workflow which is intuitive, easily customizeable and extensible. GDSFactory is a Python based framework to build EPICs that provides a common syntax for design/layout, simulation (Ansys Lumerical, tidy3d, MEEP, MPB, DEVSIM, SAX, Elmer, Palace, …), verification (Klayout DRC, LVS, netlist extraction, connectivity checks, fabrication models) and validation. This paper showcases the capabilities of GDSFactory, highlighting its end-to-end workflow, which enables users to turn their chip designs into working products.
-+++
 
 # Introduction
 
@@ -56,13 +57,24 @@ As output you write a GDSII or OASIS file that you can send to your foundry for 
 ## Parametric Cells (PCells) in Python or YAML
 A PCell is a Parametric Cell describing the geometry of a particular device. PCells can accept other PCells as arguments in order to build arbitrarily complex Components.
 
-```python
+```{code-cell} python
+:label: compositing
+:caption: Creating a new `component` by composition of a Mach-Zehnder interferometer  and a bent waveguide attached at port `o2`.
+
 import gdsfactory as gf
 
 @gf.cell
 def mzi_with_bend(radius: float=10)->gf.Component:
     c = gf.Component()
-    ...
+    mzi = c.add_ref(gf.components.mzi())
+    bend = c.add_ref(gf.components.bend_euler(radius=radius))
+    bend.connect('o1', mzi['o2'])
+    c.add_port('o1', port=mzi['o1'])
+    c.add_port('o2', port=bend['o2'])
+    return c
+
+c = mzi_with_bend(radius=100)
+c.plot()
 ```
 
 You can also describe automated single or bundles or routes between different components. 

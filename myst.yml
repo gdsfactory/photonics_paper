@@ -25,6 +25,7 @@ project:
       affiliation: 
         - name: PsiQuantum
     - name: Floris Laporte
+      orcid: 0000-0002-4850-4641
       github: flaport
       affiliation: 
         - name: GDSFactory+

@@ -1,0 +1,12 @@
+[project]
+name = "gf-photonics-paper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "gdsfactory>=9.5.0",
+    "ipykernel>=6.29.5",
+    "jupyter-server>=2.15.0",
+    "jupytext>=1.17.0",
+]
