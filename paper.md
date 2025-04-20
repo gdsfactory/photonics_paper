@@ -12,7 +12,7 @@ keywords:
     - electronic design automation (EDA)
 export:
   - format: pdf
-    template: ../lapreprint-typst
+    template: lapreprint
 
 kernelspec:
   name: python3
@@ -32,7 +32,6 @@ To achieve this, GDSFactory offers a comprehensive solution through a unified Py
 ```
 
 ```{figure} figures/DesignCycle.png
-:scale: 80 %
 :alt: Closing the design cycle with GDSFactory.
 
 GDSFactory bridges the whole EPIC design cycle, with a variety of Foundary PDKs available it is both easy to construct circuits reusing proven devices and to realize conceptually new designs. The generated component layouts can be used in varous simulators for exploration, optimization and validation. GDSfactory tightly integrates with KLayout, leveraging its advanced design rule checks (DRC) and layout versus schematic (LVS) capabilities. For characterization of the fabricated devices GDSFactory provides rich metadata compatible to commercial wafer probers, including the position and orientation of fiber-to-waveguide couplers.
@@ -68,6 +67,22 @@ As output you write a GDSII or OASIS file that you can send to your foundry for 
 
 ## Parametric Cells (PCells) in Python or YAML
 A PCell is a Parametric Cell describing the geometry of a particular device. PCells can accept other PCells as arguments in order to build arbitrarily complex Components.
+
+<!-- ![](xref:mystguide#img:altair-horsepower)
+
+```{figure}
+
+![A matplotlib image of the cars data](xref:mystguide#img:mpl)
+
+```
+
+![](xref:mystguide#tbl:data-cars) -->
+
+```{figure}
+![](#plt:sine)
+This is a sine wave, purely for illustrative purposes
+```
+
 
 :::{code-cell} python
 :label: compositing
