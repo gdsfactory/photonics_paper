@@ -12,7 +12,7 @@ keywords:
     - electronic design automation (EDA)
 export:
   - format: pdf
-    template: ../lapreprint-typst
+    template: ./util/lapreprint-typst
 
 kernelspec:
   name: python3
