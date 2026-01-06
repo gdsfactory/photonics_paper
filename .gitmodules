@@ -1,0 +1,3 @@
+[submodule "util/lapreprint-typst"]
+	path = util/lapreprint-typst
+	url = git@github.com:gdsfactory/lapreprint-typst.git
