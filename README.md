@@ -13,3 +13,10 @@ To build the PDF version of the paper, run:
 ```bash
 uv run myst build --pdf --execute
 ```
+
+Should you run into problems with warnings about klive interfering with the typst build, you can suppress those warnings by:
+
+```bash
+rm -rf ./_build/execute
+KFACTORY_LOGFILTER_LEVEL="ERROR" myst build --pdf --execute
+```

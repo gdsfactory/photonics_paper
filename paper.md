@@ -13,6 +13,7 @@ keywords:
 export:
   - format: pdf
     template: ./util/lapreprint-typst
+    output: exports/paper.pdf
 
 kernelspec:
   name: python3
@@ -32,7 +33,6 @@ To achieve this, GDSFactory offers a comprehensive solution through a unified `p
 ```
 
 ```{figure} figures/DesignCycle.png
-:scale: 80 %
 :alt: Closing the design cycle with GDSFactory.
 
 GDSFactory bridges the whole EPIC design cycle, with a variety of Foundary PDKs available it is both easy to construct circuits reusing proven devices and to realize conceptually new designs. The generated component layouts can be used in varous simulators for exploration, optimization and validation. GDSfactory tightly integrates with KLayout, leveraging its advanced design rule checks (DRC) and layout versus schematic (LVS) capabilities. For characterization of the fabricated devices GDSFactory provides rich metadata compatible to commercial wafer probers, including the position and orientation of fiber-to-waveguide couplers.
@@ -71,15 +71,26 @@ As input, GDSFactory supports 3 different workflows that can be also mixed and m
 
 As output you write a GDSII or OASIS file that you can send to your foundry for fabrication. It also exports component settings (for measurement and data analysis) and netlists (for circuit simulations). The following examples concentrate on photonic integrated design, however they are readily adaptable for RF and analog circuit design.
 
-
-```{embed} #geometry-polygon
+:::::: {figure}
+::::: {figure}
+::::{card}
+:::{embed} #geometry-polygon
 :remove-output: true
 :remove-input: false
-```
-
-:::{figure} #geometry-polygon
-:label: fig-geometry-polygon
 :::
+::::
+:::::
+
+:::: {figure}
+:::{embed} #geometry-polygon
+:remove-output: false
+:remove-input: true
+:::
+::::
+
+Basic Caption supported
+::::::
+
 
 [](#fig-geometry-polygon) shows a minimal example how to create a polygon from a list of points on a specified layer. The snippet also demonstrates multiple options to save and visualize the created layout. You can eather export the layout to a GDSII file using `c.write_gds` and open it in a viewer of choice, open it in KLayout using `c.show()` or visualize it inline in a Jupyter notebook using `c.plot()`.
 
@@ -90,84 +101,13 @@ A PCell is a Parametric Cell describing the geometry of a particular device. In 
 
 PCells can nest other PCells as arguments in order to build arbitrarily complex Components. As such it is possible to build a library of reusable PCells that can be composed to create circuits. GDSFactory provides a rich library of pre-defined PCells for common photonic components like waveguides, bends, couplers, interferometers, ring resonators and more.
 
-:::{code-cell} python
-:label: compositing
-:caption: Creating a new `component` by composition of a Mach-Zehnder interferometer and a bent waveguide attached at port `o2`.
-
-import gdsfactory as gf
-
-@gf.cell
-def mzi_with_bend(radius: float=10)->gf.Component:
-    c = gf.Component()
-    mzi  = c << gf.components.mzi()
-    bend = c << gf.components.bend_euler(radius=radius)
-    bend.connect('o1', mzi['o2'])
-    c.add_port('o1', port=mzi['o1'])
-    c.add_port('o2', port=bend['o2'])
-    return c
-
-c = mzi_with_bend(radius=20)
-c.plot()
-:::
-
 [](#compositing) demonstrates how a new PCell can be created by composing PCells defined prior. Connecting port `o1` of the bend to `o2` of the MZI ensures their correct relative placement, respecting the orientation of the optical ports. 
 
 ### Automatic Routing
 Manually routing complex circuits quickly becomes cumbersome. To alleviate this burden GDSFactory provides a routing API for (semi-)automatic waveguide routing. Given a declarative description of the desired connections it can create single and bundled waveguide routes, that avoid obstacles and collisions between the bundled waveguides. A minimal demonstration of the routing API is provided in [](#routing).
 
-:::{code-cell} python
-:label: routing
-:caption: Connecting components via single waveguide or bundles can be automated using the routing API.
-
-@gf.cell
-def nxn_to_nxn() -> gf.Component:
-    c = gf.Component()
-    c1 = c << gf.components.nxn(east=3, ysize=20)
-    c2 = c << gf.components.nxn(west=3)
-    c2.move((40, 10))
-    gf.routing.route_bundle_sbend(
-        c,
-        c1.ports.filter(orientation=0),
-        c2.ports.filter(orientation=180),
-        sort_ports=True,
-        cross_section="strip",
-    )
-    return c
-
-c = nxn_to_nxn()
-c.plot()
-:::
-
 ### `YAML` based Composition
 While defining PCells in `python` is very powerfull, one commonly simply desires to combine pre-existing building block into circuits (as in [](#compositing) and [](#routing)). In these cases it can be beneficial to describe the desired circuit in a netlist-like format. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#routing) is shown in [](#yaml). 
-
-:::{code-block} yaml
-:label: yaml
-:caption: When composing circuits it is often more convenient to define subcomponents and their relative position in the `YAML` based design flow. The given example yields the same layout as [](#routing)
-
-name: nxn_to_nxn
-instances:
-  c1:
-    component: nxn
-    settings:
-      east: 3
-      ysize: 20
-  c2:
-    component: nxn
-    settings:
-      west: 3
-placements:
-  c2:
-    x: 40
-    y: 10
-routes:
-  optical:
-    routing_strategy: route_bundle_sbend
-    links:
-      - c1,o4: c2,o1
-      - c1,o3: c2,o2
-      - c1,o2: c2,o0
-:::
 
 ::: {note} Schematic Driven Layout
 For complex circuits you can start with a Schematic view that you can convert to `YAML`.
