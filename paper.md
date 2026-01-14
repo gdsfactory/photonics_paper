@@ -63,6 +63,7 @@ In this paper we will highlight the key features of GDSFactory follwing the stru
 GDSFactory offers a range of design capabilities, including layout description, optimization, and simulation. It allows users to define parametric cells (PCells) in `python`, facilitating the creation of complex components. The library supports the simulation of components using different solvers, such as mode solvers (finite element and finite difference eigenmode solvers), eigenmode expansion methods (EME), TCAD and thermal simulators, and fullwave FDTD simulations. Optimization capabilities are also available through an integration with Ray Tune, and automatically differentiable solvers enabling efficient parameter tuning for improved performance.
 
 ## Mask Layout
+Generating mask layouts ready for fabrication is the core functionality of GDSFactory.
 As input, GDSFactory supports 3 different workflows that can be also mixed and matched.
 
 1. Write `python` code. Recommended for developing cell libraries.
@@ -71,52 +72,118 @@ As input, GDSFactory supports 3 different workflows that can be also mixed and m
 
 As output you write a GDSII or OASIS file that you can send to your foundry for fabrication. It also exports component settings (for measurement and data analysis) and netlists (for circuit simulations). The following examples concentrate on photonic integrated design, however they are readily adaptable for RF and analog circuit design.
 
+:::{side-by-side} #basics-polygon
+Minimal example demonstrating the most basic functionality of GDSFactory: creating a polygon on a specified layer. (a) Shows the code snippet in `python` including descriptive comments to highlight selected aspects. All code snippets used throughout this paper can be run interactively in the [online version of this paper](https://github.com/gdsfactory/photonics-paper). All shown examples are part of the [GDSFactory documentation](https://gdsfactory.github.io/gdsfactory/). (b) The resulting GDSII layout as it would appear in the inline Jupyter notebook viewer shipped with `gdsfactory`. 
+:::
+
+[](#fig-basics-polygon) shows a minimal example how to create a polygon from a list of points on a specified layer. The snippets also demonstrate some of the steps required to get going:
+1. As with any `python` library, the first step is to import `gdsfactory`. For convenience we will alias it as `gf`. 
+2. Before we can start designing, we need to activate a process development kit (PDK) that defines the layers and design rules for a specific fabrication process. Here we use the generic PDK included with GDSFactory. We will discuss [](#sec-pdks) in more detail below.
+3. Next we create a blank `Component` instance that will hold our geometry. It can be understood as an empty GDS cell, that is enriched with additional functionality like metadata and ports.
+4. Finally we add the desired polygon to the component by specifying the list of points and the GDS layer we want to add it to.
+5. Lastly we visualize the created geometry using the built-in plotting functionality. In this case we use the inline viewer for Jupyter notebooks. However, GDSFactory also supports synchronization with KLayout for advanced visualization and verification. Leveraging the export capabilities of GDSFactory, the created layout can be saved and viewed as a GDSII or OASIS file ready for fabrication. (TODO correctly name available formats)
+
+Defining more complex geometries from scratch can quickly become cumbersome. To alleviate this burden GDSFactory provides a rich library of predefined components ranging from geometrical primitives, over labels, structures for process controll like resolution tests and interlayer alignment calipers to common photonic building blocks like waveguides, bends, couplers, interferometers, ring resonators and more. These predefined parametric components can be easily reused in user-defined designed as is demonstrated in [](#fig-basics-predefined-components). Here we create a new blank component and add two realizations of predefined components: a text label and a rectangle. The parent component contains possibly multiple references to the underlying geometry, which can be manipulated individually.
+
+:::{side-by-side} #basics-predefined-components
+How to use predefined components. (a) Code snippet demonstrating how to realize predefined components from the GDSFactory library. Subsequently the created geometry can placed (possibly multiple times) into a parent component. The position and orientation of each reference can be manipulated individually. (b) Resulting layout showing the placed rectangle and two instances of the text label with different positions and orientation.
+:::
+
+### Functions as Parametric Cells (PCells)
+As we have seen in [](#fig-basics-predefined-components) GDSFactory provides a mechanism to handle parametric components, that is components whose concrete geometry depends on a set of parameters. Such parametric components are commonly referred to as parametric cells (PCells). In GDSFactory PCells are defined as `python` functions decorated with `@gf.cell`. These functions take parameters as input and have to return a `gf.Component` instance containing the generated geometry. As such, the PCell definitions inherit the full power and flexibility of the `python` ecosystem, including control flow and complex arithmetics.
+
+:::{side-by-side} #basics-mzi-pcell
+How to define new parametric cells (PCells). (a) Code snippet showing how to define a new parametric cell from a component factory, i.e. from a factory that returns a `gf.Component` when called with desired parameters. The particular example is a Mach-Zehnder-Interferometer (MZI) with a bend attached to the output waveguide demonstrating the functionality of directional ports (b) Resulting layout showing the created MZI leading into a bend. The radius of the bend is {si}`15 </micro/meter>` as specified when calling the PCell function. The armlengths, bend-radii, waveguide widths etc. are not further specified here, but rather taken from the default settings of the underlying components.
+:::
+
+[](#fig-basics-mzi-pcell) demonstrates how a new PCell can be created. PCells can nest other PCells in order to build arbitrarily complex Components. In this case, we are composing previously defined PCells - a Mach-Zehnder-Interferometer (MZI) and an Euler-bend[^euler] - exposing the radius of the output bend as an input parameter. Based on this ability to compose PCells, GDSFactory enables large scale hierarchical layouts, where the composition of simpler building blocks allows the designer to reduce complexity by hiding implementation details behind layers of abstraction.
+
+[^euler]: An Euler-bend is a bend whose curvature changes linearly along its length, minimizing losses due to mode mismatch.
+
+### (Automatic) Routing
+Integrated photonics relies at its core on waveguides to route light between different devices on chip. In contrast to low-speed electrical interconnects, waveguides require careful matching of the cross-sectional geometry at all interfaces to avoid unwanted reflections and losses. To facilitate connecting different components, GDSFactory leverages directional ports. Each port defines not only its position, but also its orientation and cross-section, enabling reliable mutual alignment when connecting different components. In [](#fig-basics-mzi-pcell) we have already seen an example using said mechanism: Connecting port `o1` of the bend to `o2` of the MZI ensures their correct relative placement, respecting the orientation of the optical ports. To allow access to the ports of the newly created component, we export the unconnected ports of the nested components. Using `c.draw_ports()` we can visualize the resulting ports, and using `c.pprint_ports()` we can print their properties in a human-readable format.
+
+:::{side-by-side} #basics-pprint-ports
+Retreiving port information in a human readable form (a) Code snippet reusing the component `c_mzi_with_bend` previously defined in [](#fig-basics-mzi-pcell-code) (b) A table containing the port names, positions, orientations and cross-sections of the component
+:::
+
+Manually routing complex circuits quickly becomes cumbersome. To alleviate this burden GDSFactory provides a routing API for (semi-)automatic waveguide routing. Given a declarative description of the desired connections it can create single and bundled waveguide routes, that avoid obstacles and collisions between the bundled waveguides. A minimal demonstration of automatically routing a single connection is shown in [](#fig-basics-route-single).
+
+:::{side-by-side} #basics-route-single
+Automatic manhattan routing for a single waveguide connection (a) Code snippet demonstrating how to route a waveguide between two ports (b) Resulting layout showing the created 1x2 multi mode interferometers (MMI) with an automatically routed waveguides the two.
+:::
+
+### `YAML` based Composition
+While defining PCells in `python` is very powerfull, one commonly simply desires to combine pre-existing building block into circuits (as we have already done in [](#compositing) and [](#routing)). In these cases it can be beneficial to describe the desired circuit in a netlist-like format. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#routing) is shown in [](#yaml). 
+
 :::::: {figure}
 ::::: {figure}
+:label: fig-yaml-code
 ::::{card}
-:::{embed} #geometry-polygon
-:remove-output: true
-:remove-input: false
-:::
+```yaml
+name: mask_compact
+
+instances:
+  rings:
+    # `pack_doe` is a special function that creates a Design of Experiments array.
+    component: pack_doe
+    settings:
+      
+      # It will create ring resonators with these different radii and coupling lengths.
+      doe: ring_single
+      max_size : [1500, null]
+      settings:
+        radius: [20, 30, 40, 50, 60]
+        length_x: [1, 2, 3, 4, 5, 6]
+
+      # This tells the function to generate all possible combinations of the specified radius and length_x values.
+      do_permutations: True
+      function:
+
+        # After each unique ring is created, the add_fiber_array function is applied to it, adding grating couplers for testing.
+        function: add_fiber_array
+        settings:
+            fanout_length: 200
+
+  mzis:
+    component: pack_doe_grid
+    settings:
+      doe: mzi
+      settings:
+        delta_length: [10, 100]
+      do_permutations: True
+      spacing: [10, 10]
+      function: add_fiber_array
+
+placements:
+  rings:
+    xmin: 50
+
+  mzis:
+    xmin: rings,east
+```
 ::::
 :::::
 
 :::: {figure}
-:::{embed} #geometry-polygon
+:label: fig-yaml-output
+:::{embed} #yaml-flow
 :remove-output: false
 :remove-input: true
 :::
 ::::
 
-Basic Caption supported
+Declaratively describing the desired circuit in `YAML` format. (a) `YAML` that is fed to `gf.read.from_yaml()` to create a circuit layout. The example creates a design of experiments (DoE) array of ring resonators with varying radii and coupling lengths, as well as a grid of Mach-Zehnder Interferometers (MZIs) with different path length differences. Each component is automatically equipped with fiber arrays for testing. (b) Resulting layout showing the created DoE array of ring resonators on the left and the MZI grid on the right.
 ::::::
 
-
-[](#fig-geometry-polygon) shows a minimal example how to create a polygon from a list of points on a specified layer. The snippet also demonstrates multiple options to save and visualize the created layout. You can eather export the layout to a GDSII file using `c.write_gds` and open it in a viewer of choice, open it in KLayout using `c.show()` or visualize it inline in a Jupyter notebook using `c.plot()`.
-
-### Functions as Parametric Cells (PCells)
-A PCell is a Parametric Cell describing the geometry of a particular device. In GDSFactory foundational PCells are defined as `python` functions decorated with `@gf.cell`. These functions take parameters as input and return a `Component` instance containing the geometry of the device. As such, the PCell definitions inherit the full power and flexibility of the `python` ecosystem, including control flow and complex arithmetics.
-
-[](#fig-minimal-cell) shows a minimal example of a PCell definition for a polygon. The function `polygon` takes the parameters `size` and `layer` as input and returns a `Component` instance containing a polygon of the specified size on the specified layer.
-
-PCells can nest other PCells as arguments in order to build arbitrarily complex Components. As such it is possible to build a library of reusable PCells that can be composed to create circuits. GDSFactory provides a rich library of pre-defined PCells for common photonic components like waveguides, bends, couplers, interferometers, ring resonators and more.
-
-[](#compositing) demonstrates how a new PCell can be created by composing PCells defined prior. Connecting port `o1` of the bend to `o2` of the MZI ensures their correct relative placement, respecting the orientation of the optical ports. 
-
-### Automatic Routing
-Manually routing complex circuits quickly becomes cumbersome. To alleviate this burden GDSFactory provides a routing API for (semi-)automatic waveguide routing. Given a declarative description of the desired connections it can create single and bundled waveguide routes, that avoid obstacles and collisions between the bundled waveguides. A minimal demonstration of the routing API is provided in [](#routing).
-
-### `YAML` based Composition
-While defining PCells in `python` is very powerfull, one commonly simply desires to combine pre-existing building block into circuits (as in [](#compositing) and [](#routing)). In these cases it can be beneficial to describe the desired circuit in a netlist-like format. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#routing) is shown in [](#yaml). 
-
-::: {note} Schematic Driven Layout
-For complex circuits you can start with a Schematic view that you can convert to `YAML`.
-:::
 
 ## Simulations: Layout as Single Source of Truth
 The GDSFactory ecosystem supports multiple solvers to simulate the physical behavior of the created design. These cover several aspects, like the optical behavior of single components via finite difference time domain simulations, the collective behavior of multiple coupled components via scattering matrix (S-matrix) circuit simulators, the propagation of thermal transients, electronic properties and more. The single source of truth providing the device geometry, is a key benefit of GDSFactory linking these different simulators together.
 
 ## Continuous Integration: Regression Tests
+
+(sec-pdks)=
+## Process Development Kits (PDKs)
 
 # Verification
 

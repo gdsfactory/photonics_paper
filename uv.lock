@@ -752,7 +752,7 @@ wheels = [
 [[package]]
 name = "gdsfactory"
 version = "9.29.1"
-source = { directory = "gdsfactory" }
+source = { editable = "gdsfactory" }
 dependencies = [
     { name = "attrs" },
     { name = "freetype-py" },
@@ -888,7 +888,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gdsfactory", extras = ["dev"], directory = "gdsfactory" },
+    { name = "gdsfactory", extras = ["dev"], editable = "gdsfactory" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "jupyter-server", specifier = ">=2.15.0" },
     { name = "jupytext", specifier = ">=1.17.0" },

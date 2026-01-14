@@ -12,4 +12,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-gdsfactory = { path = "gdsfactory" }
+gdsfactory = { path = "gdsfactory", editable = true }

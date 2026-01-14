@@ -2,3 +2,5 @@ _build
 build
 exports
 *.gds
+
+paper.pdf
