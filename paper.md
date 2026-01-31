@@ -14,6 +14,11 @@ export:
   - format: pdf
     template: ./util/lapreprint-typst
     output: exports/paper.pdf
+    id: pdf-export
+
+downloads:
+  - id: pdf-export
+    title: A PDF of this document
 
 kernelspec:
   name: python3
@@ -72,6 +77,7 @@ As input, GDSFactory supports 3 different workflows that can be also mixed and m
 
 As output you write a GDSII or OASIS file that you can send to your foundry for fabrication. It also exports component settings (for measurement and data analysis) and netlists (for circuit simulations). The following examples concentrate on photonic integrated design, however they are readily adaptable for RF and analog circuit design.
 
+<!-- TODO: align examples to form one cohesive storyline: e.g. layout e.g. strip to slot converter; slot modulator; PIC -->
 :::{side-by-side} #basics-polygon
 Minimal example demonstrating the most basic functionality of GDSFactory: creating a polygon on a specified layer. (a) Shows the code snippet in `python` including descriptive comments to highlight selected aspects. All code snippets used throughout this paper can be run interactively in the [online version of this paper](https://github.com/gdsfactory/photonics-paper). All shown examples are part of the [GDSFactory documentation](https://gdsfactory.github.io/gdsfactory/). (b) The resulting GDSII layout as it would appear in the inline Jupyter notebook viewer shipped with `gdsfactory`. 
 :::
@@ -113,7 +119,7 @@ Manually routing complex circuits quickly becomes cumbersome. To alleviate this 
 Automatic manhattan routing for a single waveguide connection (a) Code snippet demonstrating how to route a waveguide between two ports (b) Resulting layout showing the created 1x2 multi mode interferometers (MMI) with an automatically routed waveguides the two.
 :::
 
-### `YAML` based Composition
+### `YAML` based Composition for Large Scale Layouts
 While defining PCells in `python` is very powerfull, one commonly simply desires to combine pre-existing building block into circuits (as we have already done in [](#compositing) and [](#routing)). In these cases it can be beneficial to describe the desired circuit in a netlist-like format. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#routing) is shown in [](#yaml). 
 
 :::::: {figure}
@@ -176,18 +182,78 @@ placements:
 Declaratively describing the desired circuit in `YAML` format. (a) `YAML` that is fed to `gf.read.from_yaml()` to create a circuit layout. The example creates a design of experiments (DoE) array of ring resonators with varying radii and coupling lengths, as well as a grid of Mach-Zehnder Interferometers (MZIs) with different path length differences. Each component is automatically equipped with fiber arrays for testing. (b) Resulting layout showing the created DoE array of ring resonators on the left and the MZI grid on the right.
 ::::::
 
+## Continuous Integration: Regression Tests
+Demonstrate GDS-diff:
+Rev 1:
+fundamental comp -> derived component 1
 
-## Simulations: Layout as Single Source of Truth
+Rev 2:
+fundamental comp -> derived component 1 & derived component 2
+
+To introduce derived comp 2 the design engineer introduced changes to fundamental comp -> regression in derived comp 1
+
+-> show GDSdiff.
+
+TODO: Which other Tests to show?
+
+## Simulation and Optimization: Layout as Single Source of Truth
 The GDSFactory ecosystem supports multiple solvers to simulate the physical behavior of the created design. These cover several aspects, like the optical behavior of single components via finite difference time domain simulations, the collective behavior of multiple coupled components via scattering matrix (S-matrix) circuit simulators, the propagation of thermal transients, electronic properties and more. The single source of truth providing the device geometry, is a key benefit of GDSFactory linking these different simulators together.
 
-## Continuous Integration: Regression Tests
+### Component-Level Simulation
+Show extraction of:
+- S-parameters of strip to slot
+- S-parameters of coupler
+- Electrical? Would need help for that!
+
+Reference to Layer stack ([](#sec-pdks))
+Show of 3D view.
+
+### Circuit-Level Simulation
+Circuit -> CROW with SAX
+Optimize CROW (with minimax obj-functions)
 
 (sec-pdks)=
 ## Process Development Kits (PDKs)
+Few words: what is a PDK
+### Structure of a PDK in GDSFactory
+  - Layer Definitions
+  - Cross-sections; Layer Stack
+  - Cell-library
+  - Design Rules
+-> Maybe subsection for each?
+
+### Currently Available PDKs
+List openly accessible PDKs and PDKs that are available upon request / under NDA.
+Emphasize portability of high level designs across foundrys.
+
 
 # Verification
+TODO: @tvt173 I need help here :/ I do not know much about Verification inf gdsfactory...
+
+Design Rules important part of PDK. Guarantee foundry can fabricate specified structures accurately.
+## Design Rule Check (DRC)
+Uses KLayout for DRC
+List of design rules supported out of the box
+- Feature size
+- Inclusion
+- Density
+...
+
+## Layout vs. Schematic (LVS)
+What is actually happening here?
+Do we check `unterminated ports`?
+
 
 # Measurement and Validation
+Once design has been sucessfully verified it can be send of to the foundry (transmitting the design files to the foundry is called tape-out (historical reference))
+
+## Metadata
+Demonstrate Fiber Metadata.
+Wafer prober compatibility.
+
+## Teststructures
+Nonexhaustive List: Available photonic/metrology teststructures (also litho/alignment etc.). Introduce DOE cell.
+Final: add teststructures to case study mask to complete the tutorial.
 
 
 # Conclusion
@@ -197,7 +263,7 @@ The verification and validation capabilities of GDSFactory play a crucial role i
 
 Furthermore, GDSFactory provides an interactive schematic capture feature that enhances the design process and facilitates the alignment between design intent and the produced layout. With support for SPICE and `YAML`, designers have the flexibility to define and modify schematics in a user-friendly manner, either visually or programmatically.
 
-The ability to define test sequences and measurement parameters within GDSFactory streamlines the post-fabrication testing process. By establishing a clear measurement and data analysis pipeline, designers can evaluate the fabricated components against the design specifications, ensuring the delivery of known good dies. In conclusion, GDSFactory is a comprehensive and extensible design automation tool that empowers designers to efficiently develop integrated circuits and components. Its `python`-driven workflow, combined with its integration capabilities, verification tools, schematic capture feature, and test sequence definition, provides a powerful platform for turning chip designs into validated products. 
+The ability to define test sequences and measurement parameters within GDSFactory streamlines the post-fabrication testing process. By establishing a clear measurement and data analysis pipeline, designers can evaluate the fabricated components against the design specifications, allowing them to identify and systematically eliminate potential flaws. In conclusion, GDSFactory is a comprehensive and extensible design automation tool that empowers designers to efficiently develop integrated circuits and components. Its `python`-driven workflow, combined with its integration capabilities, verification tools, schematic capture feature, and test sequence definition, provides a powerful platform for turning chip designs into validated products. 
 
 # Acknowledgements
 We would like to acknowledge all other contributors to the GDSFactory project who at the time of writing are: Simon Bilodeau (Google), Niko Savola (Google, Aalto University), Marc de Cea Falco (Google), Helge Gehring (Google), Yannick Augenstein (FlexCompute), Ryan Camacho (BYU), Sequoia Ploeg (BYU), Prof. Lukas Chrostowski (UBC), Erman Timurdogan (Lumentum), Damien Bonneau (PsiQuantum), Alec Hammond (Meta), Thomas Dorch (HyperLight), Alex Sludds (Lightmatter), Igal Bayn (Quantum Transistors), Skandan Chandrasekar (UWaterloo), Tim Ansell, Ardavan Oskoii (Meta), Bradley Snyder (Superlight) and Amro Tork (Mabrains). Erman Timurdogan contributed the GDSFactory design, verification and validation cycles figure and Dario Quintero contributed the GDSFactory microservices architecture figure.
