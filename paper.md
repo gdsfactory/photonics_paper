@@ -107,27 +107,44 @@ Reusing predefined components (PCells). (a) Code snippet demonstrating how to re
 As we have seen in [](#fig-case-reuse) GDSFactory provides a mechanism to handle parametric components, that is components whose concrete geometry depends on a set of parameters. In GDSFactory such PCells are defined as `python` functions decorated with `@gf.cell`. These functions take parameters as input and have to return a `gf.Component` instance containing the generated geometry. As such, the PCell definitions inherit the full power and flexibility of the `python` ecosystem, including control flow and complex arithmetics.
 
 :::{side-by-side} #case-py-pcell
-How to define new parametric cells (PCells). (a) Code snippet showing how to define a new parametric cell as a component factory, i.e. a function that returns a `gf.Component` when called with desired parameters. The particular example is the strip-to-slot converter we had previously contructed in [](#fig-case-reuse) (b) Resulting layout showing the created converter. To enable a neater presentation the converter is flipped by 90° before it's rendered.
+Defining new parametric cells (PCells). (a) Code snippet showing how to define a new parametric cell as a component factory, i.e. a function that returns a `gf.Component` when called with desired parameters. The particular example is the strip-to-slot converter we had previously contructed in [](#fig-case-reuse) (b) Resulting layout showing the created converter. To enable a compact presentation the converter is flipped by 90° before it's rendered.
 :::
 
-[](#fig-basics-mzi-pcell) demonstrates how a new PCell can be created. PCells can nest other PCells in order to build arbitrarily complex Components. In this case, we are composing previously defined PCells - a Mach-Zehnder-Interferometer (MZI) and an Euler-bend[^euler] - exposing the radius of the output bend as an input parameter. Based on this ability to compose PCells, GDSFactory enables large scale hierarchical layouts, where the composition of simpler building blocks allows the designer to reduce complexity by hiding implementation details behind layers of abstraction.
-
-[^euler]: An Euler-bend is a bend whose curvature changes linearly along its length, minimizing losses due to mode mismatch.
+[](#fig-case-py-pcell) demonstrates how a new PCell can be created. PCells can nest other PCells in order to build arbitrarily complex components. In this case, we are composing one previously defined PCell - the taper - and a custom polygon. The cross section widths, gap size and length are exposed as input parameter. Based on this ability to compose PCells, GDSFactory enables large scale hierarchical layouts, where the composition of simpler building blocks allows the designer to reduce complexity by hiding implementation details behind layers of abstraction.
 
 ### (Automatic) Routing
-Integrated photonics relies at its core on waveguides to route light between different devices on chip. In contrast to low-speed electrical interconnects, waveguides require careful matching of the cross-sectional geometry at all interfaces to avoid unwanted reflections and losses. To facilitate connecting different components, GDSFactory leverages directional ports. Each port defines not only its position, but also its orientation and cross-section, enabling reliable mutual alignment when connecting different components. In [](#fig-basics-mzi-pcell) we have already seen an example using said mechanism: Connecting port `o1` of the bend to `o2` of the MZI ensures their correct relative placement, respecting the orientation of the optical ports. To allow access to the ports of the newly created component, we export the unconnected ports of the nested components. Using `c.draw_ports()` we can visualize the resulting ports, and using `c.pprint_ports()` we can print their properties in a human-readable format.
+Integrated photonics relies at its core on waveguides to route light between different devices on chip. In contrast to low-speed electrical interconnects, waveguides require careful matching of the cross-sectional geometry at all interfaces to avoid unwanted reflections and losses. To facilitate connecting different components, GDSFactory leverages directional ports. Each port defines not only its position, but also its orientation and cross-section, enabling reliable mutual alignment when connecting different components.
 
-:::{side-by-side} #basics-pprint-ports
-Retreiving port information in a human readable form (a) Code snippet reusing the component `c_mzi_with_bend` previously defined in [](#fig-basics-mzi-pcell-code) (b) A table containing the port names, positions, orientations and cross-sections of the component
+:::{side-by-side} #case-ports
+Adding port metadata. (a) Code snippet demonstrating how ports can be added to a PCell and how they can be vizualized using `c.draw_ports()`. (b) Resulting layout including port indicators (flipped by 90° for compact display).
+:::
+
+
+To allow connecting our strip-to-slot converter to appropriate waveguides later, we add the port information in [](#fig-case-ports) using the `c.add_port` function. The `@gf.cell` decorator caches components which were previously generated with the same input parameters. This makes sure that we add multiple references to the same component instead of replicating the component to reduce the GDSII file size and the associated computational burden. This however, leads to a small complication when adding port indicators using `c.draw_ports()`, because the indicators are directly written into the components geometry. To avoid poluting the cache with invalid geometry, we `.copy()` the component and only insert the port markers into the copy.
+Further, `c.pprint_ports()` prints the port properties in a human-readable format (see [](#fig-case-pprint-ports)).
+
+:::{side-by-side} #case-pprint-ports
+Retreiving port information in a human readable form (a) Code snippet reusing the component `I2II` previously defined in [](#fig-case-ports) (b) A table containing the port names, positions, orientations and cross-sections of the component. To appreciate the port center (x, y) coordinates, consider that the rendered geometry in [](#fig-case-ports) is flipped by 90°.
+:::
+
+NOTE: From here on things are still veeeeerrry rough
+TODO: Explain aligning Components by their ports.
+
+:::{side-by-side} #case-port-connect
+Aligning components by connecting their ports.
 :::
 
 Manually routing complex circuits quickly becomes cumbersome. To alleviate this burden GDSFactory provides a routing API for (semi-)automatic waveguide routing. Given a declarative description of the desired connections it can create single and bundled waveguide routes, that avoid obstacles and collisions between the bundled waveguides. A minimal demonstration of automatically routing a single connection is shown in [](#fig-basics-route-single).
 
-:::{side-by-side} #basics-route-single
-Automatic manhattan routing for a single waveguide connection (a) Code snippet demonstrating how to route a waveguide between two ports (b) Resulting layout showing the created 1x2 multi mode interferometers (MMI) with an automatically routed waveguides the two.
+:::{side-by-side} #case-route-single
+Automatic manhattan routing for a single waveguide connection (a) Code snippet demonstrating how to route a waveguide between two ports (b) Resulting layout showing the automatically create waveguide connection.
 :::
 
-Multiple waveguides can be routed simultaneously using bundles. In (#basics-route-multi) we leverage the automatic routing of multiple waveguides to realize a fan-out to four strip to slot converters
+Multiple waveguides can be routed simultaneously using bundles. In (#basics-route-multi) we leverage this automatic routing of multiple waveguides to realize a fan-out to four strip to slot converters
+
+:::{side-by-side} #case-route-multiple
+Automatic S-bend routing for a bundle of waveguide connections (a) Code snippet placing and routing input waveguides and fanned out strip-to-slot converters. (b) Resulting layout showing the automatically generated fan out.
+:::
 
 ### `YAML` based Composition for Large Scale Layouts
 While defining PCells in `python` is very powerful, one commonly simply desires to combine preexisting building block into circuits (as we have already done in [](#fig-basics-polygon) and [](#fig-basics-mzi-pcell)). In these cases describing the desired circuit in a netlist-like format allows the user to focus on the relevant aspects, while reducing boilerplate. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#basics-route-multi) is shown in [](#yaml). 
@@ -164,22 +181,9 @@ instances:
         settings:
             fanout_length: 200
 
-  mzis:
-    component: pack_doe_grid
-    settings:
-      doe: mzi
-      settings:
-        delta_length: [10, 100]
-      do_permutations: True
-      spacing: [10, 10]
-      function: add_fiber_array
-
 placements:
   rings:
     xmin: 50
-
-  mzis:
-    xmin: rings,east
 ```
 ::::
 :::::
@@ -207,7 +211,7 @@ To introduce derived comp 2 the design engineer introduced changes to fundamenta
 
 -> show GDSdiff.
 
-TODO: Which other Tests to show?
+TODO: Which other Tests to show? Are the regression tests relevant enough to show?
 
 ## Simulation and Optimization: Layout as Single Source of Truth
 The GDSFactory ecosystem supports multiple solvers to simulate the physical behavior of the created design. These cover several aspects, like the optical behavior of single components via finite difference time domain simulations, the collective behavior of multiple coupled components via scattering matrix (S-matrix) circuit simulators, the propagation of thermal transients, electronic properties and more. The single source of truth providing the device geometry, is a key benefit of GDSFactory linking these different simulators together.
@@ -216,18 +220,21 @@ The GDSFactory ecosystem supports multiple solvers to simulate the physical beha
 Show extraction of:
 - S-parameters of strip to slot
 - S-parameters of coupler
-- Electrical? Would need help for that!
+TODO: Hey Floris what is the currently preferred way of running fdtd S-matrix extraction simulations? Are open source options available? I think that would make it a lot easier (in contrast to Tidy3D/Lumerical etc.)
+
+- Electrical? Would need help for that! There seems to be something going with Palace, but I didn't really follow the discussion there. Is the EO-polymer example even suitable? Can we do TCAD/electrical simulations for EO-polymer?
 
 Reference to Layer stack ([](#sec-pdks))
-Show of 3D view.
+Show of 3D view -> probably nicest with some electrical connections/heaters. 
 
 ### Circuit-Level Simulation
 Circuit -> CROW with SAX
-Optimize CROW (with minimax obj-functions)
+Optimize CROW (I have some material on optimizing the filter poles to match known filter types (e.g. butterworth). But in principle this way of designing filters can even be done analytically. Need to figure out where this would fit in)
 
 (sec-pdks)=
 ## Process Development Kits (PDKs)
 Few words: what is a PDK
+
 ### Structure of a PDK in GDSFactory
   - Layer Definitions
   - Cross-sections; Layer Stack
@@ -238,10 +245,10 @@ Few words: what is a PDK
 ### Currently Available PDKs
 List openly accessible PDKs and PDKs that are available upon request / under NDA.
 Emphasize portability of high level designs across foundrys.
-
+What else would you want to add here?
 
 # Verification
-TODO: tvt173 I need help here :/ I do not know much about Verification inf gdsfactory...
+TODO: Troy I need help here :/ I do not know much about Verification inf gdsfactory...
 
 Design Rules important part of PDK. Guarantee foundry can fabricate specified structures accurately.
 ## Design Rule Check (DRC)
@@ -255,19 +262,23 @@ List of design rules supported out of the box
 ## Layout vs. Schematic (LVS)
 What is actually happening here?
 Do we check `unterminated ports`?
+As you can see: I have no clue :/
 
 
 # Measurement and Validation
-Once design has been sucessfully verified it can be send of to the foundry (transmitting the design files to the foundry is called tape-out (historical reference))
+Once design has been sucessfully verified it can be send of to the foundry. Transmitting the design files to the foundry is often referred to as tape-out (historical reference).
 
 ## Metadata
 Demonstrate Fiber Metadata.
-Wafer prober compatibility.
+Wafer prober compatibility. Which wafer probers work? Are there people companies using this? Do we have experimental data we could use to illustrate?
 
 ## Teststructures
-Nonexhaustive List: Available photonic/metrology teststructures (also litho/alignment etc.). Introduce DOE cell.
+Nonexhaustive List: Available photonic/metrology teststructures (also litho/alignment etc.).
+Also here: do we have experimental data?
+
 Final: add teststructures to case study mask to complete the tutorial.
 
+TODO: what is missing?
 
 # Conclusion
 The paper has highlighted the key features and functionalities of GDSFactory for hardware design. By leveraging the power of `python`, GDSFactory empowers designers with a familiar and flexible programming language widely used in machine learning, scientific computing, and engineering. This enables seamless integration with existing software ecosystems and promotes code reuse and collaboration.
