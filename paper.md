@@ -61,11 +61,13 @@ GDSFactory acts a as a unifying framework covering the entire EPIC design cycle.
     - Model extraction: extract the important parameters for each component.
     - Build a data pipeline from raw data, to structured data and dashboards for monitoring your chip performance.
 
-In this paper we will highlight the key features of GDSFactory follwing the structure of the design cycle shown in Figure 1 and  mentioned above.
+In this paper we will highlight the key features of GDSFactory follwing the structure of the design cycle shown in Figure 1. To contextualize the demonstrated features we will in parallel develop a simple photonic transceiver circuit as a case study. This will allow us to paint a more cohesive picture showcasing GDSFactory's particular strengths.
 
 # Design Flow
 
 GDSFactory offers a range of design capabilities, including layout description, optimization, and simulation. It allows users to define parametric cells (PCells) in `python`, facilitating the creation of complex components. The library supports the simulation of components using different solvers, such as mode solvers (finite element and finite difference eigenmode solvers), eigenmode expansion methods (EME), TCAD and thermal simulators, and fullwave FDTD simulations. Optimization capabilities are also available through an integration with Ray Tune, and automatically differentiable solvers enabling efficient parameter tuning for improved performance.
+
+In the following we design a comparatively simple photonic transceiver based on modulators, that leverage electro optic polymers edposited inside slit waveguides and germanium photodetectors for detection. Later, coarse wavelength division multiplexing will be performed using coupled ring oscillator waveguides as routers/bandfilters. These examples concentrate on photonic integrated design, however they are readily adaptable for RF and analog circuit design.
 
 ## Mask Layout
 Generating mask layouts ready for fabrication is the core functionality of GDSFactory.
@@ -75,31 +77,37 @@ As input, GDSFactory supports 3 different workflows that can be also mixed and m
 2. Write `YAML` code to describe your circuit. Recommended for circuit design. Notice that the `YAML` includes schematic information (instances and routes) as well as Layout information (placements).
 3. Define schematic, export SPICE netlist, convert SPICE to `YAML` and tweak `YAML`.
 
-As output you write a GDSII or OASIS file that you can send to your foundry for fabrication. It also exports component settings (for measurement and data analysis) and netlists (for circuit simulations). The following examples concentrate on photonic integrated design, however they are readily adaptable for RF and analog circuit design.
+As output you write a GDSII or OASIS file that you can send to your foundry for fabrication. It also exports component settings (for measurement and data analysis) and netlists (for circuit simulations). 
 
-<!-- TODO: align examples to form one cohesive storyline: e.g. layout e.g. strip to slot converter; slot modulator; PIC -->
-:::{side-by-side} #basics-polygon
-Minimal example demonstrating the most basic functionality of GDSFactory: creating a polygon on a specified layer. (a) Shows the code snippet in `python` including descriptive comments to highlight selected aspects. All code snippets used throughout this paper can be run interactively in the [online version of this paper](https://github.com/gdsfactory/photonics-paper). All shown examples are part of the [GDSFactory documentation](https://gdsfactory.github.io/gdsfactory/). (b) The resulting GDSII layout as it would appear in the inline Jupyter notebook viewer shipped with `gdsfactory`. 
+We will start our design by constructing a strip-to-slot converter, which interfaces strip waveguides used to route light across the chip to the slot waveguides of the modulators. These simple passive component will allow us to clearly demonstrate the more fundamental step of mask-design, like polygon manipulation, waveguide cross sections and ports. In the course of this section we will work our way to higher levels of abstraction, which help handling the complexity of large scale designs.
+
+:::{side-by-side} #case-polygon
+Minimal example demonstrating the most basic functionality of GDSFactory: creating a polygon on a specified layer. (a) Shows the code snippet in `python` including descriptive comments to highlight selected aspects. All code snippets used throughout this paper can be run interactively in the [online version of this paper](https://github.com/gdsfactory/photonics-paper). (b) The resulting GDSII layout as it would appear in the inline Jupyter notebook viewer shipped with `gdsfactory`. 
 :::
 
-[](#fig-basics-polygon) shows a minimal example how to create a polygon from a list of points on a specified layer. The snippets also demonstrate some of the steps required to get going:
+[](#fig-case-polygon) shows a minimal example how to create a polygon from a list of points on a specified layer. The snippets also demonstrate some of the steps required to get going:
 1. As with any `python` library, the first step is to import `gdsfactory`. For convenience we will alias it as `gf`. 
-2. Before we can start designing, we need to activate a process development kit (PDK) that defines the layers and design rules for a specific fabrication process. Here we use the generic PDK included with GDSFactory. We will discuss [](#sec-pdks) in more detail below.
+2. Before we can start designing, we need to activate a process development kit (PDK) that defines the layers and design rules for a specific fabrication process. Here, we use the generic PDK included with GDSFactory. We will discuss [](#sec-pdks) in more details below.
 3. Next we create a blank `Component` instance that will hold our geometry. It can be understood as an empty GDS cell, that is enriched with additional functionality like metadata and ports.
 4. Finally we add the desired polygon to the component by specifying the list of points and the GDS layer we want to add it to.
 5. Lastly we visualize the created geometry using the built-in plotting functionality. In this case we use the inline viewer for Jupyter notebooks. However, GDSFactory also supports synchronization with KLayout for advanced visualization and verification. Leveraging the export capabilities of GDSFactory, the created layout can be saved and viewed as a GDSII or OASIS file ready for fabrication. (TODO correctly name available formats)
 
-Defining more complex geometries from scratch can quickly become cumbersome. To alleviate this burden GDSFactory provides a rich library of predefined components ranging from geometrical primitives, over labels, structures for process controll like resolution tests and interlayer alignment calipers to common photonic building blocks like waveguides, bends, couplers, interferometers, ring resonators and more. These predefined parametric components can be easily reused in user-defined designed as is demonstrated in [](#fig-basics-predefined-components). Here we create a new blank component and add two realizations of predefined components: a text label and a rectangle. The parent component contains possibly multiple references to the underlying geometry, which can be manipulated individually.
+Defining more complex geometries from scratch can quickly become cumbersome. To alleviate this burden GDSFactory provides a rich library of predefined components ranging from geometrical primitives, over labels, structures for process controll like resolution tests and interlayer alignment calipers to common photonic building blocks like waveguides, bends, couplers, interferometers, ring resonators and more. These predefined parametric components can be easily reused in user-defined designs. In [](#fig-case-reuse) we demonstrate such reuse for the case of a waveguide taper, which in combination with the previously defined polygon forms strip-to-slot converter. The snippet follows three main steps:
+1. The component factory[^factories] `gf.components.taper` generates a taper component `t` with specific dimensions (i.e. lenght and widths at both ends).
+2. A reference to that component is then added to the component `c` (from [](#fig-case-polygon)): `t_ref = c << t`. Here, `t_ref` is the reference that was added. 
+3. Lastly, the reference is moved up to form a consistent gap of size `g`. The parent component can in principle contain multiple references to the same underlying geometry, which can be manipulated individually (not shown in the current example). In this way, the resulting GDSII file is significantly lighter, because the geometry is only saved once.
 
-:::{side-by-side} #basics-predefined-components
-How to use predefined components. (a) Code snippet demonstrating how to realize predefined components from the GDSFactory library. Subsequently the created geometry can placed (possibly multiple times) into a parent component. The position and orientation of each reference can be manipulated individually. (b) Resulting layout showing the placed rectangle and two instances of the text label with different positions and orientation.
+[^factories]: We call functions that return a single `gf.Component` component factories or parametric cells (PCells). This is the origin of the name GDSFactory.
+
+:::{side-by-side} #case-reuse
+Reusing predefined components (PCells). (a) Code snippet demonstrating how to realize predefined components from the GDSFactory library. Subsequently the created geometry can placed (possibly multiple times) into a parent component. The position and orientation of each reference can be manipulated individually. (b) Resulting layout showing the placed rectangle and two instances of the text label with different positions and orientation.
 :::
 
 ### Functions as Parametric Cells (PCells)
-As we have seen in [](#fig-basics-predefined-components) GDSFactory provides a mechanism to handle parametric components, that is components whose concrete geometry depends on a set of parameters. Such parametric components are commonly referred to as parametric cells (PCells). In GDSFactory PCells are defined as `python` functions decorated with `@gf.cell`. These functions take parameters as input and have to return a `gf.Component` instance containing the generated geometry. As such, the PCell definitions inherit the full power and flexibility of the `python` ecosystem, including control flow and complex arithmetics.
+As we have seen in [](#fig-case-reuse) GDSFactory provides a mechanism to handle parametric components, that is components whose concrete geometry depends on a set of parameters. In GDSFactory such PCells are defined as `python` functions decorated with `@gf.cell`. These functions take parameters as input and have to return a `gf.Component` instance containing the generated geometry. As such, the PCell definitions inherit the full power and flexibility of the `python` ecosystem, including control flow and complex arithmetics.
 
-:::{side-by-side} #basics-mzi-pcell
-How to define new parametric cells (PCells). (a) Code snippet showing how to define a new parametric cell from a component factory, i.e. from a factory that returns a `gf.Component` when called with desired parameters. The particular example is a Mach-Zehnder-Interferometer (MZI) with a bend attached to the output waveguide demonstrating the functionality of directional ports (b) Resulting layout showing the created MZI leading into a bend. The radius of the bend is {si}`15 </micro/meter>` as specified when calling the PCell function. The armlengths, bend-radii, waveguide widths etc. are not further specified here, but rather taken from the default settings of the underlying components.
+:::{side-by-side} #case-py-pcell
+How to define new parametric cells (PCells). (a) Code snippet showing how to define a new parametric cell as a component factory, i.e. a function that returns a `gf.Component` when called with desired parameters. The particular example is the strip-to-slot converter we had previously contructed in [](#fig-case-reuse) (b) Resulting layout showing the created converter. To enable a neater presentation the converter is flipped by 90° before it's rendered.
 :::
 
 [](#fig-basics-mzi-pcell) demonstrates how a new PCell can be created. PCells can nest other PCells in order to build arbitrarily complex Components. In this case, we are composing previously defined PCells - a Mach-Zehnder-Interferometer (MZI) and an Euler-bend[^euler] - exposing the radius of the output bend as an input parameter. Based on this ability to compose PCells, GDSFactory enables large scale hierarchical layouts, where the composition of simpler building blocks allows the designer to reduce complexity by hiding implementation details behind layers of abstraction.
@@ -178,7 +186,7 @@ placements:
 
 :::: {figure}
 :label: fig-yaml-large-output
-:::{embed} #yaml-flow
+:::{embed} #yaml-mask
 :remove-output: false
 :remove-input: true
 :::
