@@ -43,7 +43,7 @@ To achieve this, GDSFactory offers a comprehensive solution through a unified `p
 GDSFactory bridges the whole EPIC design cycle, with a variety of Foundary PDKs available it is both easy to construct circuits reusing proven devices and to realize conceptually new designs. The generated component layouts can be used in varous simulators for exploration, optimization and validation. GDSfactory tightly integrates with KLayout, leveraging its advanced design rule checks (DRC) and layout versus schematic (LVS) capabilities. For characterization of the fabricated devices GDSFactory provides rich metadata compatible to commercial wafer probers, including the position and orientation of fiber-to-waveguide couplers.
 ```
 
-GDSFactory acts a as a unifying framework that covers the entire EPIC design cycle. It allows the user to:
+GDSFactory acts a as a unifying framework covering the entire EPIC design cycle. It allows the user to:
 
 - Design (Layout, Simulation, Optimization)
     - Capture design intent in a schematic and automatically generate a layout.
@@ -119,12 +119,17 @@ Manually routing complex circuits quickly becomes cumbersome. To alleviate this 
 Automatic manhattan routing for a single waveguide connection (a) Code snippet demonstrating how to route a waveguide between two ports (b) Resulting layout showing the created 1x2 multi mode interferometers (MMI) with an automatically routed waveguides the two.
 :::
 
+Multiple waveguides can be routed simultaneously using bundles. In (#basics-route-multi) we leverage the automatic routing of multiple waveguides to realize a fan-out to four strip to slot converters
+
 ### `YAML` based Composition for Large Scale Layouts
-While defining PCells in `python` is very powerfull, one commonly simply desires to combine pre-existing building block into circuits (as we have already done in [](#compositing) and [](#routing)). In these cases it can be beneficial to describe the desired circuit in a netlist-like format. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#routing) is shown in [](#yaml). 
+While defining PCells in `python` is very powerful, one commonly simply desires to combine preexisting building block into circuits (as we have already done in [](#fig-basics-polygon) and [](#fig-basics-mzi-pcell)). In these cases describing the desired circuit in a netlist-like format allows the user to focus on the relevant aspects, while reducing boilerplate. For this purpose GDSFactory establishes a `YAML` based representation. The specification equivalent to [](#basics-route-multi) is shown in [](#yaml). 
+
+This makes composite designs very scalable, allowing the user to easily design for example parameter variation experiments (DOEs) as shown in [](#yaml-large).
 
 :::::: {figure}
+:label: yaml-large
 ::::: {figure}
-:label: fig-yaml-code
+:label: fig-yaml-large-code
 ::::{card}
 ```yaml
 name: mask_compact
@@ -172,7 +177,7 @@ placements:
 :::::
 
 :::: {figure}
-:label: fig-yaml-output
+:label: fig-yaml-large-output
 :::{embed} #yaml-flow
 :remove-output: false
 :remove-input: true
@@ -228,7 +233,7 @@ Emphasize portability of high level designs across foundrys.
 
 
 # Verification
-TODO: @tvt173 I need help here :/ I do not know much about Verification inf gdsfactory...
+TODO: tvt173 I need help here :/ I do not know much about Verification inf gdsfactory...
 
 Design Rules important part of PDK. Guarantee foundry can fabricate specified structures accurately.
 ## Design Rule Check (DRC)

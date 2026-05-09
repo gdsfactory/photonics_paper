@@ -878,7 +878,7 @@ requires-dist = [
 [[package]]
 name = "gf-photonics-paper"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "gdsfactory", extra = ["dev"] },
     { name = "ipykernel" },
